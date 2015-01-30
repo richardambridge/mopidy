@@ -7,22 +7,28 @@ import pykka
 
 from . import listener
 
-
 class PlaylistsController(object):
     pykka_traversable = True
 
     def __init__(self, backends, core):
         self.backends = backends
-        self.core = core
-
+        self.core = core      
+        self._playlistsCache = None
+            
     def get_playlists(self, include_tracks=True):
+        if self._playlistsCache:
+            playlists = self._playlistsCache
+            return playlists
+        
         futures = [b.playlists.playlists
                    for b in self.backends.with_playlists.values()]
         results = pykka.get_all(futures)
         playlists = list(itertools.chain(*results))
         if not include_tracks:
             playlists = [p.copy(tracks=[]) for p in playlists]
+        self._playlistsCache = playlists
         return playlists
+    
 
     playlists = property(get_playlists)
     """
